@@ -2,7 +2,8 @@ package com.adventure.ui;
 
 import com.adventure.config.ModConfig;
 import com.adventure.data.ClientTaskCache;
-import com.adventure.task.Task;
+import com.adventure.data.ClientTaskDatabase;
+import com.adventure.data.ClientTaskDatabase.ClientTask;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.RenderTickCounter;
@@ -17,7 +18,6 @@ public class TaskHudOverlay {
     private static final int PADDING = 5;
     private static final int OFFSET_X = 10;
     private static final int OFFSET_Y = 10;
-    private static final int HINT_HEIGHT = 20;
 
     public static void render(DrawContext context, RenderTickCounter tickCounter) {
         if (!ModConfig.isHudEnabled()) {
@@ -29,103 +29,128 @@ public class TaskHudOverlay {
             return;
         }
 
+        // Don't render when chat or other screens are open
+        if (client.currentScreen != null) {
+            return;
+        }
+
         int screenWidth = client.getWindow().getScaledWidth();
         int screenHeight = client.getWindow().getScaledHeight();
         
-        // Render position (right side by default)
-        int x = screenWidth - TASK_WIDTH - OFFSET_X;
-        int y = OFFSET_Y;
-
-        // Get player tasks from client cache
-        List<Task> tasks = ClientTaskCache.getInstance().getPlayerTasks();
+        // Render key binding hint at top center
+        renderKeyHint(context, screenWidth);
         
-        // Render key binding hint at the bottom
-        renderKeyHint(context, screenWidth, screenHeight);
+        // Render position (right side)
+        int x = screenWidth - TASK_WIDTH - OFFSET_X;
+        int y = OFFSET_Y + 25; // Below the hint
+
+        // Get player tasks from client database
+        int currentLevel = ClientTaskCache.getInstance().getCurrentLevel();
+        List<ClientTask> tasks = ClientTaskDatabase.getInstance().getTasksForLevel(currentLevel);
         
         if (tasks.isEmpty()) {
             return;
         }
 
-        // Render each task
+        // Render each task - first 3 are active
         for (int i = 0; i < Math.min(5, tasks.size()); i++) {
-            Task task = tasks.get(i);
-            int currentLevel = ClientTaskCache.getInstance().getCurrentLevel();
-            boolean isActive = (task.getId() == currentLevel);
+            ClientTask task = tasks.get(i);
+            // Task is active if within the first 3 (ACTIVE_TASK_COUNT)
+            boolean isActive = ClientTaskDatabase.getInstance().isTaskActive(currentLevel, task.getId());
             
             renderTask(context, x, y + i * (TASK_HEIGHT + PADDING), task, isActive);
         }
     }
 
-    private static void renderKeyHint(DrawContext context, int screenWidth, int screenHeight) {
+    private static void renderKeyHint(DrawContext context, int screenWidth) {
         // Get the key binding name
-        String keyName = "T"; // Default key
+        String keyName = "J"; // Default key
         try {
             var keyBinding = com.adventure.AdventureModClient.getOpenTaskListKey();
             if (keyBinding != null) {
                 keyName = keyBinding.getBoundKeyLocalizedText().getString();
             }
         } catch (Exception e) {
-            // Use default "T" if we can't get the key
+            // Use default "J" if we can't get the key
         }
         
-        // Render hint text at bottom center
-        Text hintText = Text.translatable("hint.adventure.open_task_list", keyName)
-                .formatted(Formatting.GRAY, Formatting.ITALIC);
+        // Simple hint text
+        String hintStr = "[" + keyName + "] Lista zadan";
         
-        int textWidth = MinecraftClient.getInstance().textRenderer.getWidth(hintText);
+        int textWidth = MinecraftClient.getInstance().textRenderer.getWidth(hintStr);
         int hintX = screenWidth / 2 - textWidth / 2;
-        int hintY = screenHeight - 30;
+        int hintY = 5;
         
         // Semi-transparent background
-        int bgWidth = textWidth + 10;
-        int bgHeight = HINT_HEIGHT;
-        context.fill(hintX - 5, hintY - 2, hintX + bgWidth - 5, hintY + bgHeight - 2, 0x80000000);
+        int bgWidth = textWidth + 16;
+        int bgHeight = 14;
+        context.fill(hintX - 8, hintY - 2, hintX + bgWidth - 8, hintY + bgHeight, 0xCC000000);
         
-        // Draw text
-        context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, hintText, hintX, hintY, 0xCCCCCC);
+        // Draw text with shadow - ARGB format with full alpha
+        context.drawText(MinecraftClient.getInstance().textRenderer, hintStr, hintX, hintY, 0xFFFFFF55, true);
     }
 
-    private static void renderTask(DrawContext context, int x, int y, Task task, boolean isActive) {
-        // Background
-        int bgColor = isActive ? 0x80000000 | 0x0088FF : 0x80000000;
+    private static void renderTask(DrawContext context, int x, int y, ClientTask task, boolean isActive) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        
+        // Background - blue for active, dark for others
+        int bgColor = isActive ? 0xDD1155AA : 0xBB000000;
         context.fill(x, y, x + TASK_WIDTH, y + TASK_HEIGHT, bgColor);
         
-        // Border (draw manually since drawBorder doesn't exist in 1.21.x)
-        int borderColor = isActive ? 0xFFFFFFFF : 0xFF888888;
+        // Border
+        int borderColor = isActive ? 0xFFFFFF00 : 0xFF666666;
         // Top
-        context.fill(x, y, x + TASK_WIDTH, y + 1, borderColor);
+        context.fill(x, y, x + TASK_WIDTH, y + 2, borderColor);
         // Bottom
-        context.fill(x, y + TASK_HEIGHT - 1, x + TASK_WIDTH, y + TASK_HEIGHT, borderColor);
+        context.fill(x, y + TASK_HEIGHT - 2, x + TASK_WIDTH, y + TASK_HEIGHT, borderColor);
         // Left
-        context.fill(x, y, x + 1, y + TASK_HEIGHT, borderColor);
+        context.fill(x, y, x + 2, y + TASK_HEIGHT, borderColor);
         // Right
-        context.fill(x + TASK_WIDTH - 1, y, x + TASK_WIDTH, y + TASK_HEIGHT, borderColor);
+        context.fill(x + TASK_WIDTH - 2, y, x + TASK_WIDTH, y + TASK_HEIGHT, borderColor);
         
-        // Task text
-        Text taskText = Text.translatable(task.getTranslationKey())
-                .formatted(isActive ? Formatting.YELLOW : Formatting.WHITE);
-        context.drawText(MinecraftClient.getInstance().textRenderer, taskText, 
-                x + 5, y + 5, 0xFFFFFF, false);
+        // Level number - use String directly with ARGB colors (0xFF prefix for full alpha)
+        String levelText = "Lv." + task.getId();
+        context.drawText(client.textRenderer, levelText, x + 6, y + 6, isActive ? 0xFFFFFF00 : 0xFFAAAAAA, true);
+        
+        // Task name - get translated or use key
+        String taskName;
+        Text translatedText = Text.translatable(task.getTranslationKey());
+        String translatedStr = translatedText.getString();
+        // If translation failed, it returns the key - use a fallback
+        if (translatedStr.equals(task.getTranslationKey()) || translatedStr.isEmpty()) {
+            // Extract simple name from key like "task.adventure.collect_logs" -> "Collect Logs"
+            String key = task.getTranslationKey();
+            int lastDot = key.lastIndexOf('.');
+            taskName = lastDot >= 0 ? key.substring(lastDot + 1).replace('_', ' ') : key;
+        } else {
+            taskName = translatedStr;
+        }
+        context.drawText(client.textRenderer, taskName, x + 40, y + 6, isActive ? 0xFFFFFFFF : 0xFFCCCCCC, true);
         
         // Progress text
-        String progressText = task.getCurrentProgress() + "/" + task.getTargetAmount();
-        context.drawText(MinecraftClient.getInstance().textRenderer, progressText,
-                x + 5, y + 20, 0xCCCCCC, false);
+        String progressText = task.getCurrentProgress() + " / " + task.getTargetAmount();
+        context.drawText(client.textRenderer, progressText, x + 6, y + 20, isActive ? 0xFF55FF55 : 0xFF888888, true);
         
-        // Progress bar
-        if (isActive && task.getTargetAmount() > 0) {
-            int barWidth = TASK_WIDTH - 10;
-            int barHeight = 6;
-            int barX = x + 5;
+        // Progress bar for active task
+        if (isActive) {
+            int barWidth = TASK_WIDTH - 12;
+            int barHeight = 8;
+            int barX = x + 6;
             int barY = y + TASK_HEIGHT - 12;
             
             // Background bar
             context.fill(barX, barY, barX + barWidth, barY + barHeight, 0xFF333333);
             
-            // Progress bar
+            // Progress bar (green)
             float progress = task.getProgressPercentage();
             int progressWidth = (int) (barWidth * progress);
-            context.fill(barX, barY, barX + progressWidth, barY + barHeight, 0xFF00FF00);
+            if (progressWidth > 0) {
+                context.fill(barX, barY, barX + progressWidth, barY + barHeight, 0xFF00DD00);
+            }
+            
+            // Bar border
+            context.fill(barX, barY, barX + barWidth, barY + 1, 0xFF555555);
+            context.fill(barX, barY + barHeight - 1, barX + barWidth, barY + barHeight, 0xFF555555);
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.adventure;
 
 import com.adventure.data.TaskDataManager;
+import com.adventure.network.TaskSyncPacket;
 import com.adventure.task.TaskManager;
 import com.adventure.tracking.TaskTracker;
 import net.fabricmc.api.ModInitializer;
@@ -14,6 +15,9 @@ public class AdventureMod implements ModInitializer {
     @Override
     public void onInitialize() {
         LOGGER.info("Initializing Adventure Tasks Mod");
+
+        // Register network packets
+        TaskSyncPacket.register();
 
         // Initialize managers
         TaskDataManager.initialize();

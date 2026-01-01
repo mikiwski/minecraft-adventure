@@ -10,6 +10,9 @@ public class TaskManager {
     private static TaskManager instance;
     private final List<Task> allTasks;
     private final TaskDatabase taskDatabase;
+    
+    // Number of active tasks at once
+    public static final int ACTIVE_TASK_COUNT = 3;
 
     private TaskManager() {
         this.taskDatabase = new TaskDatabase();
@@ -32,55 +35,65 @@ public class TaskManager {
         allTasks.addAll(taskDatabase.getAllTasks());
     }
 
-    public List<Task> getPlayerTasks(ServerPlayerEntity player) {
+    /**
+     * Get all currently active tasks for a player (3 tasks)
+     */
+    public List<Task> getActiveTasks(ServerPlayerEntity player) {
         PlayerTaskData data = PlayerTaskData.get(player);
-        int currentLevel = data.getCurrentLevel();
+        int baseLevel = data.getCurrentLevel();
         
-        // Get 5 tasks: 2 previous, 1 active, 2 next
-        List<Task> playerTasks = new ArrayList<>();
+        List<Task> activeTasks = new ArrayList<>();
         
-        // Get active task (current level)
-        if (currentLevel > 0 && currentLevel <= allTasks.size()) {
-            // Add 2 previous tasks
-            for (int i = Math.max(0, currentLevel - 3); i < currentLevel - 1; i++) {
-                if (i >= 0 && i < allTasks.size()) {
-                    playerTasks.add(allTasks.get(i));
-                }
-            }
-            
-            // Add active task
-            playerTasks.add(allTasks.get(currentLevel - 1));
-            
-            // Add 2 next tasks
-            for (int i = currentLevel; i < Math.min(currentLevel + 2, allTasks.size()); i++) {
-                playerTasks.add(allTasks.get(i));
-            }
-        } else if (currentLevel == 0) {
-            // First time - show first 3 tasks
-            for (int i = 0; i < Math.min(3, allTasks.size()); i++) {
-                playerTasks.add(allTasks.get(i));
+        // Get 3 active tasks starting from current level
+        for (int i = 0; i < ACTIVE_TASK_COUNT; i++) {
+            int taskIndex = baseLevel - 1 + i; // 0-based index
+            if (taskIndex >= 0 && taskIndex < allTasks.size()) {
+                activeTasks.add(allTasks.get(taskIndex));
             }
         }
         
-        // Fill with empty tasks if needed
-        while (playerTasks.size() < 5 && allTasks.size() > playerTasks.size()) {
-            int nextIndex = playerTasks.size();
-            if (nextIndex < allTasks.size()) {
-                playerTasks.add(allTasks.get(nextIndex));
+        return activeTasks;
+    }
+
+    /**
+     * Check if a task is currently active for the player
+     */
+    public boolean isTaskActive(ServerPlayerEntity player, Task task) {
+        PlayerTaskData data = PlayerTaskData.get(player);
+        int baseLevel = data.getCurrentLevel();
+        int taskId = task.getId();
+        
+        // Task is active if its ID is within the active range
+        return taskId >= baseLevel && taskId < baseLevel + ACTIVE_TASK_COUNT;
+    }
+
+    /**
+     * Get tasks to display in HUD (completed + active + upcoming)
+     */
+    public List<Task> getPlayerTasks(ServerPlayerEntity player) {
+        PlayerTaskData data = PlayerTaskData.get(player);
+        int baseLevel = data.getCurrentLevel();
+        
+        List<Task> playerTasks = new ArrayList<>();
+        
+        // Show 5 tasks: the 3 active ones + 2 upcoming
+        int startIndex = baseLevel - 1; // 0-based
+        for (int i = 0; i < 5; i++) {
+            int taskIndex = startIndex + i;
+            if (taskIndex >= 0 && taskIndex < allTasks.size()) {
+                playerTasks.add(allTasks.get(taskIndex));
             }
         }
         
         return playerTasks;
     }
 
+    /**
+     * Get the first active task (for backwards compatibility)
+     */
     public Task getActiveTask(ServerPlayerEntity player) {
-        PlayerTaskData data = PlayerTaskData.get(player);
-        int currentLevel = data.getCurrentLevel();
-        
-        if (currentLevel > 0 && currentLevel <= allTasks.size()) {
-            return allTasks.get(currentLevel - 1);
-        }
-        return null;
+        List<Task> activeTasks = getActiveTasks(player);
+        return activeTasks.isEmpty() ? null : activeTasks.get(0);
     }
 
     public Task getTaskById(int id) {
@@ -90,12 +103,28 @@ public class TaskManager {
         return null;
     }
 
+    /**
+     * Complete a task and shift the active window
+     */
     public void completeTask(ServerPlayerEntity player, Task task) {
         PlayerTaskData data = PlayerTaskData.get(player);
+        
         if (task.isCompleted()) {
-            data.incrementLevel();
             data.addCompletedTask(task.getId());
+            
+            // Check if this is the first active task (lowest ID in active range)
+            int baseLevel = data.getCurrentLevel();
+            if (task.getId() == baseLevel) {
+                // Shift the window - increment level
+                data.incrementLevel();
+            }
         }
     }
+    
+    /**
+     * Get total number of tasks
+     */
+    public int getTotalTasks() {
+        return allTasks.size();
+    }
 }
-

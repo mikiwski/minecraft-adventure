@@ -4,6 +4,7 @@
   "hint.adventure.open_task_list": "Press %s to open task list",
   "screen.adventure.task_list": "Task List",
   "screen.adventure.coming_soon": "Feature coming soon...",
+  "screen.adventure.instructions": "Complete tasks to earn experience!",
   "gui.adventure.close": "Close",
   "message.adventure.task_completed": "Task completed: %s",
   "message.adventure.reward_xp": "Reward: %s XP",

@@ -40,13 +40,21 @@ dependencies {
 }
 
 processResources {
-    inputs.property "version", project.version
+    // Read version dynamically from file at execution time
+    def versionProvider = providers.provider {
+        def propsFile = file('gradle.properties')
+        def props = new Properties()
+        propsFile.withInputStream { props.load(it) }
+        return props.getProperty('mod_version')
+    }
+    
+    inputs.property "version", versionProvider
     inputs.property "minecraft_version", project.minecraft_version
     inputs.property "loader_version", project.loader_version
     filteringCharset "UTF-8"
 
     filesMatching("fabric.mod.json") {
-        expand "version": project.version,
+        expand "version": versionProvider.get(),
                 "minecraft_version": project.minecraft_version,
                 "loader_version": project.loader_version
     }
@@ -84,68 +92,112 @@ jar {
     }
 }
 
-// Function to increment version in gradle.properties
-def incrementVersionInProperties() {
+// Function to read current version from properties file
+def getCurrentVersionFromFile() {
     def propsFile = file('gradle.properties')
     def props = new Properties()
     propsFile.withInputStream { props.load(it) }
-    
-    def currentVersion = props.getProperty('mod_version')
-    def versionParts = currentVersion.split('\\.')
-    def patchVersion = (versionParts[2] as Integer) + 1
-    def newVersion = "${versionParts[0]}.${versionParts[1]}.${patchVersion}"
-    
-    props.setProperty('mod_version', newVersion)
-    propsFile.withOutputStream { props.store(it, null) }
-    
-    // Reload the property
-    project.ext.mod_version = newVersion
-    project.version = newVersion
-    
-    println "Version incremented: $currentVersion -> $newVersion"
-    return newVersion
+    return props.getProperty('mod_version')
 }
 
-// Task to copy JAR to Minecraft folder (replaces old file)
-task copyToMinecraft(type: Copy) {
-    dependsOn build
-    from jar.archiveFile
-    into file("${System.getProperty('user.home')}/Library/Application Support/minecraft/server-resource-packs")
-    // Remove old version files first
-    doFirst {
-        def targetDir = file("${System.getProperty('user.home')}/Library/Application Support/minecraft/server-resource-packs")
-        if (targetDir.exists()) {
-            targetDir.listFiles().each { file ->
-                if (file.name.startsWith("${project.archives_base_name}-") && file.name.endsWith(".jar")) {
-                    file.delete()
-                    println "Deleted old version: ${file.name}"
-                }
-            }
-        } else {
+// Task to increment version and rebuild
+task incrementVersion {
+    doLast {
+        def propsFile = file('gradle.properties')
+        def props = new Properties()
+        propsFile.withInputStream { props.load(it) }
+        
+        def currentVersion = props.getProperty('mod_version')
+        def versionParts = currentVersion.split('\\.')
+        def patchVersion = (versionParts[2] as Integer) + 1
+        def newVersion = "${versionParts[0]}.${versionParts[1]}.${patchVersion}"
+        
+        props.setProperty('mod_version', newVersion)
+        propsFile.withOutputStream { props.store(it, null) }
+        
+        println "Version incremented: $currentVersion -> $newVersion"
+    }
+}
+
+// Force processResources to always run (not cached)
+processResources {
+    outputs.upToDateWhen { false }
+}
+
+// Task to copy JAR to Feather mods folder (replaces old file)
+task copyToMinecraft {
+    dependsOn remapJar
+    doLast {
+        def targetDir = file("${System.getProperty('user.home')}/Library/Application Support/feather/user-mods/1.21.11-fabric")
+        
+        // Create directory if not exists
+        if (!targetDir.exists()) {
             targetDir.mkdirs()
             println "Created directory: ${targetDir}"
         }
-    }
-    // Use fixed name to replace previous version
-    rename { "${project.archives_base_name}-${project.version}.jar" }
-    doLast {
-        println "Copied ${jar.archiveFile.get().asFile.name} to ~/Library/Application Support/minecraft/server-resource-packs/"
+        
+        // Remove ALL old adventure JAR files
+        targetDir.listFiles().each { f ->
+            if (f.name.startsWith("adventure") && f.name.endsWith(".jar")) {
+                f.delete()
+                println "Deleted old version: ${f.name}"
+            }
+        }
+        
+        // Read current version from properties (freshly saved)
+        def propsFile = file('gradle.properties')
+        def props = new Properties()
+        propsFile.withInputStream { props.load(it) }
+        def currentVersion = props.getProperty('mod_version')
+        
+        // Find the built JAR (remapped)
+        def libsDir = file("${buildDir}/libs")
+        def sourceJar = libsDir.listFiles().find { 
+            it.name.endsWith('.jar') && !it.name.contains('sources') && !it.name.contains('dev')
+        }
+        
+        if (sourceJar) {
+            def destFile = new File(targetDir, "adventure-${currentVersion}.jar")
+            destFile.bytes = sourceJar.bytes
+            println "Copied ${sourceJar.name} -> ${destFile.name}"
+            println "Deployed to: ~/Library/Application Support/feather/user-mods/1.21.11-fabric/"
+        } else {
+            println "ERROR: No JAR found in ${libsDir}"
+        }
     }
 }
 
-// Enhanced build task that increments version before building
+// Main task: increment version, clean, build, then copy
 task buildAndDeploy {
     doFirst {
-        def newVersion = incrementVersionInProperties()
-        // Update project version for this build
-        project.version = newVersion
+        // Increment version
+        def propsFile = file('gradle.properties')
+        def props = new Properties()
+        propsFile.withInputStream { props.load(it) }
+        
+        def currentVersion = props.getProperty('mod_version')
+        def versionParts = currentVersion.split('\\.')
+        def patchVersion = (versionParts[2] as Integer) + 1
+        def newVersion = "${versionParts[0]}.${versionParts[1]}.${patchVersion}"
+        
+        props.setProperty('mod_version', newVersion)
+        propsFile.withOutputStream { props.store(it, null) }
+        
+        println "Version incremented: $currentVersion -> $newVersion"
+        
+        // Clean build directory
+        delete "${buildDir}/libs"
+        delete "${buildDir}/resources"
+        println "Cleaned build directories"
     }
-    dependsOn build
-    dependsOn copyToMinecraft
+    finalizedBy build
     doLast {
-        println "Build and deploy completed! Version: ${project.version}"
+        println "Build and deploy completed!"
     }
 }
+
+// Copy after build
+build.finalizedBy copyToMinecraft
 
 // configure the maven publication
 publishing {

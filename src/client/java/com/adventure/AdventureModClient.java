@@ -1,6 +1,7 @@
 package com.adventure;
 
 import com.adventure.config.ModConfig;
+import com.adventure.network.ClientTaskSyncHandler;
 import com.adventure.ui.TaskHudOverlay;
 import com.adventure.ui.TaskListScreen;
 import net.fabricmc.api.ClientModInitializer;
@@ -22,12 +23,15 @@ public class AdventureModClient implements ClientModInitializer {
     public void onInitializeClient() {
         AdventureMod.LOGGER.info("Initializing Adventure Tasks Mod Client");
 
-        // Register key binding
+        // Register network handler for task sync
+        ClientTaskSyncHandler.register();
+
+        // Register key binding - using J key (T is chat)
         openTaskListKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.adventure.open_task_list",
                 InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_T,
-                KeyBinding.Category.MISC
+                GLFW.GLFW_KEY_J,
+                KeyBinding.Category.GAMEPLAY
         ));
 
         // Register HUD overlay
