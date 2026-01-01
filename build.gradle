@@ -1,6 +1,7 @@
 plugins {
     id 'fabric-loom' version '1.13.6'
     id 'maven-publish'
+    id 'com.modrinth.minotaur' version '2.+'
 }
 
 version = project.mod_version
@@ -198,6 +199,52 @@ task buildAndDeploy {
 
 // Copy after build
 build.finalizedBy copyToMinecraft
+
+// Modrinth publishing configuration
+modrinth {
+    token = project.findProperty('modrinth_token') ?: System.getenv('MODRINTH_TOKEN')
+    projectId = project.findProperty('modrinth_project_id') ?: 'YOUR_PROJECT_ID' // Replace with your Modrinth project ID
+    
+    versionNumber = getCurrentVersionFromFile()
+    versionName = "v${getCurrentVersionFromFile()}"
+    versionType = 'release' // 'alpha', 'beta', or 'release'
+    
+    uploadFile = remapJar // This is the java jar task
+    
+    gameVersions = [project.minecraft_version]
+    loaders = ['fabric']
+    
+    // Dependencies
+    dependencies {
+        required.project 'fabric-api'
+        required.project 'fabric-loader'
+    }
+    
+    // Changelog (optional - can be read from file)
+    changelog = """
+        - System zadań z 20 poziomami
+        - 3 aktywne zadania jednocześnie
+        - HUD z listą zadań
+        - GUI z listą wszystkich zadań
+        - Nagrody XP i przedmioty
+        - Animowany overlay przy ukończeniu zadania
+        - Wsparcie dla języka polskiego i angielskiego
+    """.stripIndent()
+}
+
+// Task to publish to Modrinth (separate from build)
+task publishModrinth {
+    dependsOn remapJar
+    finalizedBy modrinth
+    doFirst {
+        if (!project.findProperty('modrinth_token') && !System.getenv('MODRINTH_TOKEN')) {
+            throw new GradleException('Modrinth token not found! Set modrinth_token in gradle.properties or MODRINTH_TOKEN environment variable.')
+        }
+        if (project.findProperty('modrinth_project_id') == 'YOUR_PROJECT_ID' || !project.findProperty('modrinth_project_id')) {
+            throw new GradleException('Please set modrinth_project_id in gradle.properties with your Modrinth project ID!')
+        }
+    }
+}
 
 // configure the maven publication
 publishing {

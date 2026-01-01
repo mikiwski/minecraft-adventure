@@ -3,7 +3,7 @@
   "id": "adventure",
   "version": "${version}",
   "name": "Mikiwski Task Adventure v${version}",
-  "description": "Mod dodający system zadań z rosnącą trudnością, nagrodami i interfejsem HUD/GUI",
+  "description": "A mod adding a task system with increasing difficulty, rewards, and HUD/GUI interface",
   "authors": [
     "Mikiwski"
   ],
