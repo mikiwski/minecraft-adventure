@@ -84,6 +84,69 @@ jar {
     }
 }
 
+// Function to increment version in gradle.properties
+def incrementVersionInProperties() {
+    def propsFile = file('gradle.properties')
+    def props = new Properties()
+    propsFile.withInputStream { props.load(it) }
+    
+    def currentVersion = props.getProperty('mod_version')
+    def versionParts = currentVersion.split('\\.')
+    def patchVersion = (versionParts[2] as Integer) + 1
+    def newVersion = "${versionParts[0]}.${versionParts[1]}.${patchVersion}"
+    
+    props.setProperty('mod_version', newVersion)
+    propsFile.withOutputStream { props.store(it, null) }
+    
+    // Reload the property
+    project.ext.mod_version = newVersion
+    project.version = newVersion
+    
+    println "Version incremented: $currentVersion -> $newVersion"
+    return newVersion
+}
+
+// Task to copy JAR to Minecraft folder (replaces old file)
+task copyToMinecraft(type: Copy) {
+    dependsOn build
+    from jar.archiveFile
+    into file("${System.getProperty('user.home')}/Library/Application Support/minecraft/server-resource-packs")
+    // Remove old version files first
+    doFirst {
+        def targetDir = file("${System.getProperty('user.home')}/Library/Application Support/minecraft/server-resource-packs")
+        if (targetDir.exists()) {
+            targetDir.listFiles().each { file ->
+                if (file.name.startsWith("${project.archives_base_name}-") && file.name.endsWith(".jar")) {
+                    file.delete()
+                    println "Deleted old version: ${file.name}"
+                }
+            }
+        } else {
+            targetDir.mkdirs()
+            println "Created directory: ${targetDir}"
+        }
+    }
+    // Use fixed name to replace previous version
+    rename { "${project.archives_base_name}-${project.version}.jar" }
+    doLast {
+        println "Copied ${jar.archiveFile.get().asFile.name} to ~/Library/Application Support/minecraft/server-resource-packs/"
+    }
+}
+
+// Enhanced build task that increments version before building
+task buildAndDeploy {
+    doFirst {
+        def newVersion = incrementVersionInProperties()
+        // Update project version for this build
+        project.version = newVersion
+    }
+    dependsOn build
+    dependsOn copyToMinecraft
+    doLast {
+        println "Build and deploy completed! Version: ${project.version}"
+    }
+}
+
 // configure the maven publication
 publishing {
     publications {
