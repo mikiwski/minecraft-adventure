@@ -14,6 +14,10 @@ import org.lwjgl.glfw.GLFW;
 public class AdventureModClient implements ClientModInitializer {
     private static KeyBinding openTaskListKey;
 
+    public static KeyBinding getOpenTaskListKey() {
+        return openTaskListKey;
+    }
+
     @Override
     public void onInitializeClient() {
         AdventureMod.LOGGER.info("Initializing Adventure Tasks Mod Client");

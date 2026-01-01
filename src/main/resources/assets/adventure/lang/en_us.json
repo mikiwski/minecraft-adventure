@@ -1,6 +1,7 @@
 {
   "category.adventure.general": "Adventure Tasks",
   "key.adventure.open_task_list": "Open Task List",
+  "hint.adventure.open_task_list": "Press %s to open task list",
   "screen.adventure.task_list": "Task List",
   "screen.adventure.coming_soon": "Feature coming soon...",
   "gui.adventure.close": "Close",

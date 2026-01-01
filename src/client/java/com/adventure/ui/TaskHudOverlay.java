@@ -1,6 +1,7 @@
 package com.adventure.ui;
 
 import com.adventure.config.ModConfig;
+import com.adventure.data.ClientTaskCache;
 import com.adventure.task.Task;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -16,6 +17,7 @@ public class TaskHudOverlay {
     private static final int PADDING = 5;
     private static final int OFFSET_X = 10;
     private static final int OFFSET_Y = 10;
+    private static final int HINT_HEIGHT = 20;
 
     public static void render(DrawContext context, RenderTickCounter tickCounter) {
         if (!ModConfig.isHudEnabled()) {
@@ -27,33 +29,60 @@ public class TaskHudOverlay {
             return;
         }
 
-        // Get player tasks - for now using simplified version
-        // TODO: Implement proper client-server synchronization
-        List<Task> tasks = getPlayerTasks(client);
-        
-        if (tasks.isEmpty()) {
-            return;
-        }
-
         int screenWidth = client.getWindow().getScaledWidth();
+        int screenHeight = client.getWindow().getScaledHeight();
         
         // Render position (right side by default)
         int x = screenWidth - TASK_WIDTH - OFFSET_X;
         int y = OFFSET_Y;
 
+        // Get player tasks from client cache
+        List<Task> tasks = ClientTaskCache.getInstance().getPlayerTasks();
+        
+        // Render key binding hint at the bottom
+        renderKeyHint(context, screenWidth, screenHeight);
+        
+        if (tasks.isEmpty()) {
+            return;
+        }
+
         // Render each task
         for (int i = 0; i < Math.min(5, tasks.size()); i++) {
             Task task = tasks.get(i);
-            boolean isActive = (i == 2); // Middle task is active
+            int currentLevel = ClientTaskCache.getInstance().getCurrentLevel();
+            boolean isActive = (task.getId() == currentLevel);
             
             renderTask(context, x, y + i * (TASK_HEIGHT + PADDING), task, isActive);
         }
     }
 
-    private static List<Task> getPlayerTasks(MinecraftClient client) {
-        // Simplified - in full implementation, this would sync from server
-        // For now, return empty list or use client-side cache
-        return List.of();
+    private static void renderKeyHint(DrawContext context, int screenWidth, int screenHeight) {
+        // Get the key binding name
+        String keyName = "T"; // Default key
+        try {
+            var keyBinding = com.adventure.AdventureModClient.getOpenTaskListKey();
+            if (keyBinding != null) {
+                keyName = keyBinding.getBoundKeyLocalizedText().getString();
+            }
+        } catch (Exception e) {
+            // Use default "T" if we can't get the key
+        }
+        
+        // Render hint text at bottom center
+        Text hintText = Text.translatable("hint.adventure.open_task_list", keyName)
+                .formatted(Formatting.GRAY, Formatting.ITALIC);
+        
+        int textWidth = MinecraftClient.getInstance().textRenderer.getWidth(hintText);
+        int hintX = screenWidth / 2 - textWidth / 2;
+        int hintY = screenHeight - 30;
+        
+        // Semi-transparent background
+        int bgWidth = textWidth + 10;
+        int bgHeight = HINT_HEIGHT;
+        context.fill(hintX - 5, hintY - 2, hintX + bgWidth - 5, hintY + bgHeight - 2, 0x80000000);
+        
+        // Draw text
+        context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, hintText, hintX, hintY, 0xCCCCCC);
     }
 
     private static void renderTask(DrawContext context, int x, int y, Task task, boolean isActive) {
