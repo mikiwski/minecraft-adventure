@@ -4,6 +4,17 @@ plugins {
     id 'com.modrinth.minotaur' version '2.+'
 }
 
+// Load local properties file (for sensitive data like tokens)
+// This file is in .gitignore and won't be committed
+def localPropertiesFile = file('gradle-local.properties')
+if (localPropertiesFile.exists()) {
+    def localProps = new Properties()
+    localPropertiesFile.withInputStream { localProps.load(it) }
+    localProps.each { prop ->
+        project.ext.set(prop.key, prop.value)
+    }
+}
+
 version = project.mod_version
 group = project.maven_group
 
@@ -202,8 +213,10 @@ build.finalizedBy copyToMinecraft
 
 // Modrinth publishing configuration
 modrinth {
+    // Token from gradle-local.properties or environment variable
     token = project.findProperty('modrinth_token') ?: System.getenv('MODRINTH_TOKEN')
-    projectId = project.findProperty('modrinth_project_id') ?: 'YOUR_PROJECT_ID' // Replace with your Modrinth project ID
+    // Project ID from gradle-local.properties or environment variable
+    projectId = project.findProperty('modrinth_project_id') ?: System.getenv('MODRINTH_PROJECT_ID') ?: 'YOUR_PROJECT_ID'
     
     versionNumber = getCurrentVersionFromFile()
     versionName = "v${getCurrentVersionFromFile()}"
@@ -235,13 +248,14 @@ modrinth {
 // Task to publish to Modrinth (separate from build)
 task publishModrinth {
     dependsOn remapJar
-    finalizedBy modrinth
+    finalizedBy tasks.modrinth
     doFirst {
         if (!project.findProperty('modrinth_token') && !System.getenv('MODRINTH_TOKEN')) {
-            throw new GradleException('Modrinth token not found! Set modrinth_token in gradle.properties or MODRINTH_TOKEN environment variable.')
+            throw new GradleException('Modrinth token not found! Create gradle-local.properties (see gradle-local.properties.example) or set MODRINTH_TOKEN environment variable.')
         }
-        if (project.findProperty('modrinth_project_id') == 'YOUR_PROJECT_ID' || !project.findProperty('modrinth_project_id')) {
-            throw new GradleException('Please set modrinth_project_id in gradle.properties with your Modrinth project ID!')
+        def projectId = project.findProperty('modrinth_project_id') ?: System.getenv('MODRINTH_PROJECT_ID')
+        if (!projectId || projectId == 'YOUR_PROJECT_ID') {
+            throw new GradleException('Please set modrinth_project_id in gradle-local.properties (see gradle-local.properties.example) or MODRINTH_PROJECT_ID environment variable!')
         }
     }
 }

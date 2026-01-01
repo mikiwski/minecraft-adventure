@@ -37,6 +37,7 @@ public class MobKillListener {
             
             if (task.matchesTarget(entity)) {
                 data.addTaskProgress(task.getId(), 1);
+                com.adventure.data.TaskDataManager.savePlayerData(player, data);
                 int currentProgress = data.getTaskProgress(task.getId());
                 syncTaskProgress(player, task.getId(), currentProgress, task.getTargetAmount());
                 
@@ -57,6 +58,7 @@ public class MobKillListener {
     
     private static void completeTaskAndAdvance(ServerPlayerEntity player, Task task, PlayerTaskData data) {
         data.addCompletedTask(task.getId());
+        com.adventure.data.TaskDataManager.savePlayerData(player, data);
         
         var reward = com.adventure.reward.RewardGiver.giveReward(player, task);
         

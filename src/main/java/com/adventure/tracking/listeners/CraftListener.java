@@ -53,6 +53,7 @@ public class CraftListener {
                 
                 if (newProgress > currentProgress) {
                     data.setTaskProgress(task.getId(), newProgress);
+                    com.adventure.data.TaskDataManager.savePlayerData(player, data);
                     syncTaskProgress(player, task.getId(), newProgress, targetAmount);
                     
                     AdventureMod.LOGGER.debug("Craft task {} progress: {}/{}", 
@@ -73,6 +74,7 @@ public class CraftListener {
     
     private static void completeTaskAndAdvance(ServerPlayerEntity player, Task task, PlayerTaskData data) {
         data.addCompletedTask(task.getId());
+        com.adventure.data.TaskDataManager.savePlayerData(player, data);
         
         var reward = com.adventure.reward.RewardGiver.giveReward(player, task);
         

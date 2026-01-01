@@ -1,0 +1,7 @@
+# Copy this file to gradle-local.properties and fill in your values
+# This file is in .gitignore and will NOT be committed to git
+
+# Modrinth publishing
+modrinth_token=YOUR_MODRINTH_TOKEN_HERE
+modrinth_project_id=YOUR_PROJECT_ID_HERE
+

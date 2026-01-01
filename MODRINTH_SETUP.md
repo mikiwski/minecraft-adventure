@@ -6,23 +6,32 @@
 2. Kliknij "Create project"
 3. Wypełnij formularz i zapisz **Project ID** (np. `mikiwski-task-adventure`)
 
-## Krok 2: Utwórz token API
+## Krok 2: Utwórz Personal Access Token
 
 1. Przejdź do https://modrinth.com/settings/tokens
-2. Kliknij "Create token"
+2. Kliknij "Create token" (lub "New token")
 3. Nadaj nazwę (np. "Gradle Upload")
-4. Skopiuj token (pokazuje się tylko raz!)
+4. **Ważne:** Upewnij się że token ma uprawnienia:
+   - `CREATE_VERSION` - do tworzenia nowych wersji
+   - `PROJECT_WRITE` - do edycji projektu (opcjonalnie, jeśli chcesz synchronizować opis)
+5. Kliknij "Create" i **skopiuj token** (pokazuje się tylko raz!)
 
-## Krok 3: Skonfiguruj gradle.properties
+## Krok 3: Skonfiguruj lokalne właściwości
 
-Otwórz `gradle.properties` i dodaj:
+**WAŻNE:** Token NIE będzie commitowany do git!
 
-```properties
-modrinth_token=TWÓJ_TOKEN_TUTAJ
-modrinth_project_id=TWÓJ_PROJECT_ID_TUTAJ
-```
+1. Skopiuj plik przykładowy:
+   ```bash
+   cp gradle-local.properties.example gradle-local.properties
+   ```
 
-**UWAGA:** `gradle.properties` jest w `.gitignore` - token nie będzie commitowany!
+2. Otwórz `gradle-local.properties` i wypełnij:
+   ```properties
+   modrinth_token=TWÓJ_TOKEN_TUTAJ
+   modrinth_project_id=TWÓJ_PROJECT_ID_TUTAJ
+   ```
+
+**UWAGA:** Plik `gradle-local.properties` jest w `.gitignore` - token nie będzie commitowany!
 
 ## Krok 4: Publikuj
 

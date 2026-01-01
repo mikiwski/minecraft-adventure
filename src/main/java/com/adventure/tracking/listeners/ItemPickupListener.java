@@ -2,6 +2,7 @@ package com.adventure.tracking.listeners;
 
 import com.adventure.AdventureMod;
 import com.adventure.data.PlayerTaskData;
+import com.adventure.data.TaskDataManager;
 import com.adventure.network.TaskSyncPacket;
 import com.adventure.task.Task;
 import com.adventure.task.TaskManager;
@@ -69,6 +70,7 @@ public class ItemPickupListener {
 
             if (matches) {
                 data.addTaskProgress(task.getId(), 1);
+                TaskDataManager.savePlayerData(player, data);
                 int currentProgress = data.getTaskProgress(task.getId());
                 syncTaskProgress(player, task.getId(), currentProgress, task.getTargetAmount());
                 
@@ -113,6 +115,7 @@ public class ItemPickupListener {
                 
                 if (newProgress > currentProgress) {
                     data.setTaskProgress(task.getId(), newProgress);
+                    TaskDataManager.savePlayerData(player, data);
                     syncTaskProgress(player, task.getId(), newProgress, targetAmount);
                     
                     AdventureMod.LOGGER.debug("Task {} inventory count: {}/{}", 
@@ -128,11 +131,12 @@ public class ItemPickupListener {
     
     private static void syncTaskProgress(ServerPlayerEntity player, int taskId, int progress, int targetAmount) {
         PlayerTaskData data = PlayerTaskData.get(player);
-        TaskSyncPacket.sendToPlayer(player, data.getCurrentLevel(), taskId, progress, targetAmount);
+        TaskSyncPacket.sendToPlayer(player, data.getCompletedTasks().size(), taskId, progress, targetAmount);
     }
     
     private static void completeTaskAndAdvance(ServerPlayerEntity player, Task task, PlayerTaskData data) {
         data.addCompletedTask(task.getId());
+        TaskDataManager.savePlayerData(player, data);
         
         // Get reward
         var reward = com.adventure.reward.RewardGiver.giveReward(player, task);

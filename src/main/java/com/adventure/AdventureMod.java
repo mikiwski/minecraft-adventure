@@ -21,7 +21,7 @@ public class AdventureMod implements ModInitializer {
         TaskSyncPacket.register();
         TaskCompletedPacket.register();
 
-        // Initialize managers
+        // Initialize managers (this also registers the attachment type)
         TaskDataManager.initialize();
         TaskManager.initialize();
         TaskTracker.initialize();

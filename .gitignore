@@ -33,3 +33,6 @@ launchProfiles.json
 # Fabric
 remappedSrc/
 
+# Local Gradle properties (contains sensitive tokens)
+gradle-local.properties
+
