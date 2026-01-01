@@ -1,6 +1,6 @@
 # Minecraft Adventure Tasks Mod
 
-Mod dla Minecraft 1.21.1 dodający system zadań z rosnącą trudnością.
+Mod dla Minecraft 1.21.11 dodający system zadań z rosnącą trudnością.
 
 ## Funkcje
 
@@ -13,13 +13,13 @@ Mod dla Minecraft 1.21.1 dodający system zadań z rosnącą trudnością.
 
 ## Wymagania
 
-- Minecraft 1.21.1
+- Minecraft 1.21.11
 - Fabric Loader 0.16.0+
 - Fabric API
 
 ## Instalacja
 
-1. Zainstaluj Fabric Loader dla Minecraft 1.21.1
+1. Zainstaluj Fabric Loader dla Minecraft 1.21.11
 2. Skopiuj plik `.jar` moda do folderu `mods`
 3. Uruchom grę
 
