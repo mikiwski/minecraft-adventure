@@ -4,18 +4,22 @@ import com.adventure.task.Task;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class ClientTaskCache {
     private static final ClientTaskCache instance = new ClientTaskCache();
     private final List<Task> playerTasks;
     private final Map<Integer, Integer> taskProgress;
+    private final Set<Integer> completedTasks;
     private int currentLevel;
 
     private ClientTaskCache() {
         this.playerTasks = new ArrayList<>();
         this.taskProgress = new HashMap<>();
+        this.completedTasks = new HashSet<>();
         this.currentLevel = 1;
     }
 
@@ -55,9 +59,22 @@ public class ClientTaskCache {
         this.currentLevel = level;
     }
 
+    public void markTaskCompleted(int taskId) {
+        completedTasks.add(taskId);
+    }
+    
+    public boolean isTaskCompleted(int taskId) {
+        return completedTasks.contains(taskId);
+    }
+    
+    public Set<Integer> getCompletedTasks() {
+        return new HashSet<>(completedTasks);
+    }
+
     public void clear() {
         playerTasks.clear();
         taskProgress.clear();
+        completedTasks.clear();
         currentLevel = 1;
     }
 }

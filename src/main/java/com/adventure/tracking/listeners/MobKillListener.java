@@ -23,32 +23,58 @@ public class MobKillListener {
 
     private static void checkMobKillForAllTasks(ServerPlayerEntity player, LivingEntity entity) {
         List<Task> activeTasks = TaskManager.getInstance().getActiveTasks(player);
+        PlayerTaskData data = PlayerTaskData.get(player);
         
         for (Task task : activeTasks) {
-            if (task.getType() != TaskType.KILL_MOB || task.isCompleted()) {
+            if (task.getType() != TaskType.KILL_MOB) {
+                continue;
+            }
+            
+            // Skip if already completed
+            if (data.isTaskCompleted(task.getId())) {
                 continue;
             }
             
             if (task.matchesTarget(entity)) {
-                task.addProgress(1);
-                syncTaskProgress(player, task);
+                data.addTaskProgress(task.getId(), 1);
+                int currentProgress = data.getTaskProgress(task.getId());
+                syncTaskProgress(player, task.getId(), currentProgress, task.getTargetAmount());
                 
                 AdventureMod.LOGGER.info("Kill task {} progress: {}/{}", 
-                    task.getId(), task.getCurrentProgress(), task.getTargetAmount());
+                    task.getId(), currentProgress, task.getTargetAmount());
                 
-                if (task.isCompleted()) {
-                    TaskManager.getInstance().completeTask(player, task);
-                    com.adventure.reward.RewardGiver.giveReward(player, task);
-                    AdventureMod.LOGGER.info("Kill task {} completed by player {}", 
-                        task.getId(), player.getName().getString());
+                if (currentProgress >= task.getTargetAmount()) {
+                    completeTaskAndAdvance(player, task, data);
                 }
             }
         }
     }
     
-    private static void syncTaskProgress(ServerPlayerEntity player, Task task) {
+    private static void syncTaskProgress(ServerPlayerEntity player, int taskId, int progress, int targetAmount) {
         PlayerTaskData data = PlayerTaskData.get(player);
-        TaskSyncPacket.sendToPlayer(player, data.getCurrentLevel(), 
-            task.getId(), task.getCurrentProgress(), task.getTargetAmount());
+        TaskSyncPacket.sendToPlayer(player, data.getCurrentLevel(), taskId, progress, targetAmount);
+    }
+    
+    private static void completeTaskAndAdvance(ServerPlayerEntity player, Task task, PlayerTaskData data) {
+        data.addCompletedTask(task.getId());
+        
+        var reward = com.adventure.reward.RewardGiver.giveReward(player, task);
+        
+        com.adventure.network.TaskCompletedPacket.sendToPlayer(player, task.getId(), 
+            task.getTranslationKey(), reward);
+        
+        syncAllActiveTasks(player, data);
+        
+        AdventureMod.LOGGER.info("Kill task {} completed by player {}", 
+            task.getId(), player.getName().getString());
+    }
+    
+    private static void syncAllActiveTasks(ServerPlayerEntity player, PlayerTaskData data) {
+        List<Task> activeTasks = TaskManager.getInstance().getActiveTasks(player);
+        for (Task task : activeTasks) {
+            int progress = data.getTaskProgress(task.getId());
+            TaskSyncPacket.sendToPlayer(player, data.getCompletedTasks().size(), 
+                task.getId(), progress, task.getTargetAmount());
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.adventure;
 
 import com.adventure.data.TaskDataManager;
+import com.adventure.network.TaskCompletedPacket;
 import com.adventure.network.TaskSyncPacket;
 import com.adventure.task.TaskManager;
 import com.adventure.tracking.TaskTracker;
@@ -18,6 +19,7 @@ public class AdventureMod implements ModInitializer {
 
         // Register network packets
         TaskSyncPacket.register();
+        TaskCompletedPacket.register();
 
         // Initialize managers
         TaskDataManager.initialize();

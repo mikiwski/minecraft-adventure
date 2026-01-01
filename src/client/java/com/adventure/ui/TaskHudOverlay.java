@@ -44,9 +44,8 @@ public class TaskHudOverlay {
         int x = screenWidth - TASK_WIDTH - OFFSET_X;
         int y = OFFSET_Y + 25; // Below the hint
 
-        // Get player tasks from client database
-        int currentLevel = ClientTaskCache.getInstance().getCurrentLevel();
-        List<ClientTask> tasks = ClientTaskDatabase.getInstance().getTasksForLevel(currentLevel);
+        // Get uncompleted tasks from client database
+        List<ClientTask> tasks = ClientTaskDatabase.getInstance().getUncompletedTasks();
         
         if (tasks.isEmpty()) {
             return;
@@ -55,8 +54,8 @@ public class TaskHudOverlay {
         // Render each task - first 3 are active
         for (int i = 0; i < Math.min(5, tasks.size()); i++) {
             ClientTask task = tasks.get(i);
-            // Task is active if within the first 3 (ACTIVE_TASK_COUNT)
-            boolean isActive = ClientTaskDatabase.getInstance().isTaskActive(currentLevel, task.getId());
+            // Task is active if it's one of the first 3 uncompleted
+            boolean isActive = i < ClientTaskDatabase.ACTIVE_TASK_COUNT;
             
             renderTask(context, x, y + i * (TASK_HEIGHT + PADDING), task, isActive);
         }

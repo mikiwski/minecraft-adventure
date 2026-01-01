@@ -30,40 +30,42 @@ public class TaskListScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        this.renderBackground(context, mouseX, mouseY, delta);
+        // Render semi-transparent background manually instead of using renderBackground
+        context.fill(0, 0, this.width, this.height, 0xC0101010);
         
         // Title
         context.drawCenteredTextWithShadow(this.textRenderer, 
                 Text.translatable("screen.adventure.task_list").formatted(Formatting.GOLD, Formatting.BOLD), 
-                this.width / 2, 15, 0xFFFFAA);
+                this.width / 2, 15, 0xFFFFFFAA);
         
-        // Get current level and tasks
-        int currentLevel = ClientTaskCache.getInstance().getCurrentLevel();
+        // Get completed count and total
+        int completedCount = ClientTaskCache.getInstance().getCompletedTasks().size();
         int totalTasks = ClientTaskDatabase.getInstance().getTotalTasks();
         
         // Progress info
-        String progressInfo = String.format("Poziom: %d / %d", currentLevel, totalTasks);
+        String progressInfo = String.format("Ukończone: %d / %d", completedCount, totalTasks);
         context.drawCenteredTextWithShadow(this.textRenderer, progressInfo, 
-                this.width / 2, 30, 0xAAAAAA);
+                this.width / 2, 30, 0xFFAAAAAA);
         
         // Render task list
         int listX = this.width / 2 - TASK_LIST_WIDTH / 2;
         int listY = 50;
         
-        List<ClientTask> tasks = ClientTaskDatabase.getInstance().getTasksForLevel(currentLevel);
+        // Get uncompleted tasks (first 5)
+        List<ClientTask> tasks = ClientTaskDatabase.getInstance().getUncompletedTasks();
         
         for (int i = 0; i < tasks.size(); i++) {
             ClientTask task = tasks.get(i);
-            boolean isActive = (task.getId() == currentLevel);
-            boolean isCompleted = task.getId() < currentLevel;
+            // First 3 uncompleted tasks are active
+            boolean isActive = i < ClientTaskDatabase.ACTIVE_TASK_COUNT;
             
-            renderTaskEntry(context, listX, listY + i * TASK_ENTRY_HEIGHT, task, isActive, isCompleted);
+            renderTaskEntry(context, listX, listY + i * TASK_ENTRY_HEIGHT, task, isActive, false);
         }
         
         // Instructions
         context.drawCenteredTextWithShadow(this.textRenderer, 
                 Text.translatable("screen.adventure.instructions").formatted(Formatting.GRAY, Formatting.ITALIC), 
-                this.width / 2, this.height - 50, 0x888888);
+                this.width / 2, this.height - 50, 0xFF888888);
         
         super.render(context, mouseX, mouseY, delta);
     }
@@ -94,12 +96,12 @@ public class TaskListScreen extends Screen {
         
         // Level indicator
         String levelStr = String.format("Lv.%d", task.getId());
-        int levelColor = isCompleted ? 0x00FF00 : (isActive ? 0xFFFF00 : 0x888888);
+        int levelColor = isCompleted ? 0xFF00FF00 : (isActive ? 0xFFFFFF00 : 0xFF888888);
         context.drawTextWithShadow(this.textRenderer, levelStr, x + 5, y + 5, levelColor);
         
         // Task name
         Text taskName = Text.translatable(task.getTranslationKey());
-        int nameColor = isCompleted ? 0x88FF88 : (isActive ? 0xFFFFFF : 0xAAAAAA);
+        int nameColor = isCompleted ? 0xFF88FF88 : (isActive ? 0xFFFFFFFF : 0xFFAAAAAA);
         context.drawTextWithShadow(this.textRenderer, taskName, x + 45, y + 5, nameColor);
         
         // Progress or status
@@ -111,7 +113,7 @@ public class TaskListScreen extends Screen {
         } else {
             statusText = "0/" + task.getTargetAmount();
         }
-        int statusColor = isCompleted ? 0x00FF00 : (isActive ? 0x00DD00 : 0x666666);
+        int statusColor = isCompleted ? 0xFF00FF00 : (isActive ? 0xFF00DD00 : 0xFF666666);
         context.drawTextWithShadow(this.textRenderer, statusText, x + 45, y + 16, statusColor);
         
         // Progress bar for active task

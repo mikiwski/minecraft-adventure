@@ -41,9 +41,15 @@ public class ItemPickupListener {
 
     private static void checkBlockBreakForAllTasks(ServerPlayerEntity player, BlockState state) {
         List<Task> activeTasks = TaskManager.getInstance().getActiveTasks(player);
+        PlayerTaskData data = PlayerTaskData.get(player);
         
         for (Task task : activeTasks) {
-            if (task.getType() != TaskType.COLLECT_ITEM || task.isCompleted()) {
+            if (task.getType() != TaskType.COLLECT_ITEM) {
+                continue;
+            }
+            
+            // Skip if already completed
+            if (data.isTaskCompleted(task.getId())) {
                 continue;
             }
 
@@ -62,17 +68,15 @@ public class ItemPickupListener {
             }
 
             if (matches) {
-                task.addProgress(1);
-                syncTaskProgress(player, task);
+                data.addTaskProgress(task.getId(), 1);
+                int currentProgress = data.getTaskProgress(task.getId());
+                syncTaskProgress(player, task.getId(), currentProgress, task.getTargetAmount());
                 
                 AdventureMod.LOGGER.info("Task {} progress: {}/{}", 
-                    task.getId(), task.getCurrentProgress(), task.getTargetAmount());
+                    task.getId(), currentProgress, task.getTargetAmount());
                 
-                if (task.isCompleted()) {
-                    TaskManager.getInstance().completeTask(player, task);
-                    com.adventure.reward.RewardGiver.giveReward(player, task);
-                    AdventureMod.LOGGER.info("Task {} completed by player {}", 
-                        task.getId(), player.getName().getString());
+                if (currentProgress >= task.getTargetAmount()) {
+                    completeTaskAndAdvance(player, task, data);
                 }
             }
         }
@@ -80,9 +84,15 @@ public class ItemPickupListener {
 
     private static void checkInventoryChangesForAllTasks(ServerPlayerEntity player) {
         List<Task> activeTasks = TaskManager.getInstance().getActiveTasks(player);
+        PlayerTaskData data = PlayerTaskData.get(player);
         
         for (Task task : activeTasks) {
-            if (task.getType() != TaskType.COLLECT_ITEM || task.isCompleted()) {
+            if (task.getType() != TaskType.COLLECT_ITEM) {
+                continue;
+            }
+            
+            // Skip if already completed
+            if (data.isTaskCompleted(task.getId())) {
                 continue;
             }
 
@@ -98,29 +108,52 @@ public class ItemPickupListener {
             // Update task progress based on current inventory count
             if (matchingItemCount > 0) {
                 int targetAmount = task.getTargetAmount();
+                int currentProgress = data.getTaskProgress(task.getId());
                 int newProgress = Math.min(matchingItemCount, targetAmount);
                 
-                if (newProgress > task.getCurrentProgress()) {
-                    task.setCurrentProgress(newProgress);
-                    syncTaskProgress(player, task);
+                if (newProgress > currentProgress) {
+                    data.setTaskProgress(task.getId(), newProgress);
+                    syncTaskProgress(player, task.getId(), newProgress, targetAmount);
                     
                     AdventureMod.LOGGER.debug("Task {} inventory count: {}/{}", 
                         task.getId(), newProgress, targetAmount);
                     
-                    if (task.isCompleted()) {
-                        TaskManager.getInstance().completeTask(player, task);
-                        com.adventure.reward.RewardGiver.giveReward(player, task);
-                        AdventureMod.LOGGER.info("Task {} completed by player {}", 
-                            task.getId(), player.getName().getString());
+                    if (newProgress >= targetAmount) {
+                        completeTaskAndAdvance(player, task, data);
                     }
                 }
             }
         }
     }
     
-    private static void syncTaskProgress(ServerPlayerEntity player, Task task) {
+    private static void syncTaskProgress(ServerPlayerEntity player, int taskId, int progress, int targetAmount) {
         PlayerTaskData data = PlayerTaskData.get(player);
-        TaskSyncPacket.sendToPlayer(player, data.getCurrentLevel(), 
-            task.getId(), task.getCurrentProgress(), task.getTargetAmount());
+        TaskSyncPacket.sendToPlayer(player, data.getCurrentLevel(), taskId, progress, targetAmount);
+    }
+    
+    private static void completeTaskAndAdvance(ServerPlayerEntity player, Task task, PlayerTaskData data) {
+        data.addCompletedTask(task.getId());
+        
+        // Get reward
+        var reward = com.adventure.reward.RewardGiver.giveReward(player, task);
+        
+        // Send completion notification to client
+        com.adventure.network.TaskCompletedPacket.sendToPlayer(player, task.getId(), 
+            task.getTranslationKey(), reward);
+        
+        // Sync updated active tasks
+        syncAllActiveTasks(player, data);
+        
+        AdventureMod.LOGGER.info("Task {} completed by player {}", 
+            task.getId(), player.getName().getString());
+    }
+    
+    private static void syncAllActiveTasks(ServerPlayerEntity player, PlayerTaskData data) {
+        List<Task> activeTasks = TaskManager.getInstance().getActiveTasks(player);
+        for (Task task : activeTasks) {
+            int progress = data.getTaskProgress(task.getId());
+            TaskSyncPacket.sendToPlayer(player, data.getCompletedTasks().size(), 
+                task.getId(), progress, task.getTargetAmount());
+        }
     }
 }

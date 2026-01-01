@@ -36,52 +36,54 @@ public class TaskManager {
     }
 
     /**
-     * Get all currently active tasks for a player (3 tasks)
+     * Get all currently active tasks for a player (first 3 uncompleted tasks)
      */
     public List<Task> getActiveTasks(ServerPlayerEntity player) {
         PlayerTaskData data = PlayerTaskData.get(player);
-        int baseLevel = data.getCurrentLevel();
-        
         List<Task> activeTasks = new ArrayList<>();
         
-        // Get 3 active tasks starting from current level
-        for (int i = 0; i < ACTIVE_TASK_COUNT; i++) {
-            int taskIndex = baseLevel - 1 + i; // 0-based index
-            if (taskIndex >= 0 && taskIndex < allTasks.size()) {
-                activeTasks.add(allTasks.get(taskIndex));
+        // Find first 3 uncompleted tasks
+        for (Task task : allTasks) {
+            if (!data.isTaskCompleted(task.getId())) {
+                activeTasks.add(task);
+                if (activeTasks.size() >= ACTIVE_TASK_COUNT) {
+                    break;
+                }
             }
         }
         
         return activeTasks;
+    }
+    
+    /**
+     * Get IDs of currently active tasks
+     */
+    public List<Integer> getActiveTaskIds(ServerPlayerEntity player) {
+        return getActiveTasks(player).stream().map(Task::getId).toList();
     }
 
     /**
      * Check if a task is currently active for the player
      */
     public boolean isTaskActive(ServerPlayerEntity player, Task task) {
-        PlayerTaskData data = PlayerTaskData.get(player);
-        int baseLevel = data.getCurrentLevel();
-        int taskId = task.getId();
-        
-        // Task is active if its ID is within the active range
-        return taskId >= baseLevel && taskId < baseLevel + ACTIVE_TASK_COUNT;
+        List<Task> activeTasks = getActiveTasks(player);
+        return activeTasks.contains(task);
     }
 
     /**
-     * Get tasks to display in HUD (completed + active + upcoming)
+     * Get tasks to display in HUD (3 active + 2 upcoming)
      */
     public List<Task> getPlayerTasks(ServerPlayerEntity player) {
         PlayerTaskData data = PlayerTaskData.get(player);
-        int baseLevel = data.getCurrentLevel();
-        
         List<Task> playerTasks = new ArrayList<>();
         
-        // Show 5 tasks: the 3 active ones + 2 upcoming
-        int startIndex = baseLevel - 1; // 0-based
-        for (int i = 0; i < 5; i++) {
-            int taskIndex = startIndex + i;
-            if (taskIndex >= 0 && taskIndex < allTasks.size()) {
-                playerTasks.add(allTasks.get(taskIndex));
+        // Get first 5 uncompleted tasks (3 active + 2 upcoming)
+        for (Task task : allTasks) {
+            if (!data.isTaskCompleted(task.getId())) {
+                playerTasks.add(task);
+                if (playerTasks.size() >= 5) {
+                    break;
+                }
             }
         }
         

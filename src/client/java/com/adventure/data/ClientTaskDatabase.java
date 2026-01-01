@@ -47,17 +47,17 @@ public class ClientTaskDatabase {
     }
 
     /**
-     * Get tasks to display: 3 active + 2 upcoming = 5 total
+     * Get tasks to display: first 5 uncompleted tasks (3 active + 2 upcoming)
      */
-    public List<ClientTask> getTasksForLevel(int currentLevel) {
+    public List<ClientTask> getUncompletedTasks() {
         List<ClientTask> result = new ArrayList<>();
         
-        // Show 5 tasks starting from current level (3 active + 2 upcoming)
-        int startIdx = currentLevel - 1; // 0-based index
-        for (int i = 0; i < 5; i++) {
-            int taskIdx = startIdx + i;
-            if (taskIdx >= 0 && taskIdx < allTasks.size()) {
-                result.add(allTasks.get(taskIdx));
+        for (ClientTask task : allTasks) {
+            if (!ClientTaskCache.getInstance().isTaskCompleted(task.getId())) {
+                result.add(task);
+                if (result.size() >= 5) {
+                    break;
+                }
             }
         }
         
@@ -65,10 +65,30 @@ public class ClientTaskDatabase {
     }
     
     /**
-     * Check if a task is active (within the 3-task active window)
+     * Get tasks to display (legacy method for compatibility)
+     */
+    public List<ClientTask> getTasksForLevel(int currentLevel) {
+        return getUncompletedTasks();
+    }
+    
+    /**
+     * Check if a task is active (first 3 uncompleted tasks)
+     */
+    public boolean isTaskActive(int taskId) {
+        List<ClientTask> uncompleted = getUncompletedTasks();
+        for (int i = 0; i < Math.min(ACTIVE_TASK_COUNT, uncompleted.size()); i++) {
+            if (uncompleted.get(i).getId() == taskId) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Legacy method for compatibility
      */
     public boolean isTaskActive(int currentLevel, int taskId) {
-        return taskId >= currentLevel && taskId < currentLevel + ACTIVE_TASK_COUNT;
+        return isTaskActive(taskId);
     }
 
     public ClientTask getTask(int id) {

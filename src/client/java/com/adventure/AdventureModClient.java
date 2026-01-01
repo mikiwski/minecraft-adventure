@@ -2,6 +2,7 @@ package com.adventure;
 
 import com.adventure.config.ModConfig;
 import com.adventure.network.ClientTaskSyncHandler;
+import com.adventure.ui.TaskCompletedOverlay;
 import com.adventure.ui.TaskHudOverlay;
 import com.adventure.ui.TaskListScreen;
 import net.fabricmc.api.ClientModInitializer;
@@ -37,6 +38,8 @@ public class AdventureModClient implements ClientModInitializer {
         // Register HUD overlay
         HudRenderCallback.EVENT.register((drawContext, tickCounter) -> {
             TaskHudOverlay.render(drawContext, tickCounter);
+            // Use 0 as tickDelta - the overlay uses system time for animation
+            TaskCompletedOverlay.getInstance().render(drawContext, 0);
         });
 
         // Register key press handler

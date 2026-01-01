@@ -5,16 +5,20 @@ import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.server.network.ServerPlayerEntity;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public class PlayerTaskData {
     private int currentLevel;
     private Set<Integer> completedTasks;
+    private Map<Integer, Integer> taskProgress;
 
     public PlayerTaskData() {
         this.currentLevel = 1;
         this.completedTasks = new HashSet<>();
+        this.taskProgress = new HashMap<>();
     }
 
     public int getCurrentLevel() {
@@ -41,6 +45,19 @@ public class PlayerTaskData {
         return completedTasks.contains(taskId);
     }
 
+    public int getTaskProgress(int taskId) {
+        return taskProgress.getOrDefault(taskId, 0);
+    }
+
+    public void setTaskProgress(int taskId, int progress) {
+        taskProgress.put(taskId, progress);
+    }
+
+    public void addTaskProgress(int taskId, int amount) {
+        int current = getTaskProgress(taskId);
+        taskProgress.put(taskId, current + amount);
+    }
+
     public NbtCompound writeNbt(NbtCompound nbt) {
         nbt.putInt("currentLevel", currentLevel);
         NbtList completedList = new NbtList();
@@ -50,6 +67,16 @@ public class PlayerTaskData {
             completedList.add(taskNbt);
         }
         nbt.put("completedTasks", completedList);
+        
+        // Save task progress
+        NbtList progressList = new NbtList();
+        for (Map.Entry<Integer, Integer> entry : taskProgress.entrySet()) {
+            NbtCompound progressNbt = new NbtCompound();
+            progressNbt.putInt("taskId", entry.getKey());
+            progressNbt.putInt("progress", entry.getValue());
+            progressList.add(progressNbt);
+        }
+        nbt.put("taskProgress", progressList);
         return nbt;
     }
 
@@ -61,6 +88,19 @@ public class PlayerTaskData {
             NbtElement element = completedList.get(i);
             if (element instanceof NbtCompound taskNbt) {
                 taskNbt.getInt("taskId").ifPresent(data.completedTasks::add);
+            }
+        }
+        
+        // Load task progress
+        NbtList progressList = nbt.getList("taskProgress").orElse(new NbtList());
+        for (int i = 0; i < progressList.size(); i++) {
+            NbtElement element = progressList.get(i);
+            if (element instanceof NbtCompound progressNbt) {
+                int taskId = progressNbt.getInt("taskId").orElse(-1);
+                int progress = progressNbt.getInt("progress").orElse(0);
+                if (taskId > 0) {
+                    data.taskProgress.put(taskId, progress);
+                }
             }
         }
         return data;

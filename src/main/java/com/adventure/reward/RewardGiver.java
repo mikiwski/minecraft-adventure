@@ -4,45 +4,62 @@ import com.adventure.AdventureMod;
 import com.adventure.task.Task;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.registry.Registries;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class RewardGiver {
     private static final Random random = new Random();
-
-    public static void giveReward(ServerPlayerEntity player, Task task) {
-        if (task.isCompleted()) {
-            // Give XP reward
-            int xp = RewardCalculator.calculateXPReward(task);
-            player.addExperience(xp);
-            
-            // Give item rewards based on difficulty
-            int itemMultiplier = RewardCalculator.calculateItemRewardMultiplier(task);
-            giveItemRewards(player, task, itemMultiplier);
-            
-            // Notify player
-            player.sendMessage(Text.translatable("message.adventure.task_completed", 
-                Text.translatable(task.getTranslationKey())), false);
-            player.sendMessage(Text.translatable("message.adventure.reward_xp", xp), false);
-            
-            AdventureMod.LOGGER.info("Reward given to player {} for task {}: {} XP", 
-                player.getName().getString(), task.getId(), xp);
-        }
+    
+    /**
+     * Reward result containing XP and items
+     */
+    public record RewardResult(int xp, List<ItemReward> items) {
+        public record ItemReward(String itemId, int count) {}
     }
 
-    private static void giveItemRewards(ServerPlayerEntity player, Task task, int multiplier) {
+    /**
+     * Give reward to player for completing a task
+     * @return RewardResult with XP and items
+     */
+    public static RewardResult giveReward(ServerPlayerEntity player, Task task) {
+        // Give XP reward
+        int xp = RewardCalculator.calculateXPReward(task);
+        player.addExperience(xp);
+        
+        // Give item rewards based on difficulty
+        int itemMultiplier = RewardCalculator.calculateItemRewardMultiplier(task);
+        List<RewardResult.ItemReward> itemRewards = giveItemRewards(player, task, itemMultiplier);
+        
+        AdventureMod.LOGGER.info("Reward given to player {} for task {}: {} XP, {} items", 
+            player.getName().getString(), task.getId(), xp, itemRewards.size());
+        
+        return new RewardResult(xp, itemRewards);
+    }
+
+    private static List<RewardResult.ItemReward> giveItemRewards(ServerPlayerEntity player, Task task, int multiplier) {
+        List<RewardResult.ItemReward> rewards = new ArrayList<>();
+        
         // Give random items based on difficulty
         for (int i = 0; i < multiplier; i++) {
             ItemStack reward = getRandomRewardItem(task.getDifficulty());
             if (!reward.isEmpty()) {
+                // Track for display
+                String itemId = Registries.ITEM.getId(reward.getItem()).toString();
+                rewards.add(new RewardResult.ItemReward(itemId, reward.getCount()));
+                
                 if (!player.getInventory().insertStack(reward)) {
                     // Drop if inventory is full
                     player.dropItem(reward, false);
                 }
             }
         }
+        
+        return rewards;
     }
 
     private static ItemStack getRandomRewardItem(int difficulty) {
