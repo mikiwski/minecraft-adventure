@@ -5,7 +5,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.tag.TagKey;
 import net.minecraft.util.Identifier;
-import net.minecraft.registry.RegistryWrapper;
+import net.minecraft.registry.Registries;
 
 public abstract class Task {
     protected final int id;
@@ -81,7 +81,7 @@ public abstract class Task {
      */
     public boolean matchesItem(ItemStack stack) {
         if (targetItem != null) {
-            Identifier itemId = stack.getItem().getRegistryEntry().getId();
+            Identifier itemId = Registries.ITEM.getId(stack.getItem());
             if (itemId != null && itemId.equals(targetItem)) {
                 return true;
             }

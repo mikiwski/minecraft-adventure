@@ -38,16 +38,7 @@ public class TaskListScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (super.keyPressed(keyCode, scanCode, modifiers)) {
-            return true;
-        }
-        // Close on ESC
-        if (keyCode == 256) { // ESC key
-            this.close();
-            return true;
-        }
-        return false;
+    public boolean shouldCloseOnEsc() {
+        return true;
     }
 }
-

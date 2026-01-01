@@ -2,13 +2,13 @@ package com.adventure.data;
 
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.nbt.NbtElement;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.world.PersistentState;
 
 import java.util.HashSet;
 import java.util.Set;
 
-public class PlayerTaskData extends PersistentState {
+public class PlayerTaskData {
     private int currentLevel;
     private Set<Integer> completedTasks;
 
@@ -23,12 +23,10 @@ public class PlayerTaskData extends PersistentState {
 
     public void setCurrentLevel(int level) {
         this.currentLevel = level;
-        markDirty();
     }
 
     public void incrementLevel() {
         this.currentLevel++;
-        markDirty();
     }
 
     public Set<Integer> getCompletedTasks() {
@@ -37,14 +35,12 @@ public class PlayerTaskData extends PersistentState {
 
     public void addCompletedTask(int taskId) {
         completedTasks.add(taskId);
-        markDirty();
     }
 
     public boolean isTaskCompleted(int taskId) {
         return completedTasks.contains(taskId);
     }
 
-    @Override
     public NbtCompound writeNbt(NbtCompound nbt) {
         nbt.putInt("currentLevel", currentLevel);
         NbtList completedList = new NbtList();
@@ -59,14 +55,13 @@ public class PlayerTaskData extends PersistentState {
 
     public static PlayerTaskData fromNbt(NbtCompound nbt) {
         PlayerTaskData data = new PlayerTaskData();
-        data.currentLevel = nbt.getInt("currentLevel");
-        if (data.currentLevel == 0) {
-            data.currentLevel = 1;
-        }
-        NbtList completedList = nbt.getList("completedTasks", 10);
+        data.currentLevel = nbt.getInt("currentLevel").orElse(1);
+        NbtList completedList = nbt.getList("completedTasks").orElse(new NbtList());
         for (int i = 0; i < completedList.size(); i++) {
-            NbtCompound taskNbt = completedList.getCompound(i);
-            data.completedTasks.add(taskNbt.getInt("taskId"));
+            NbtElement element = completedList.get(i);
+            if (element instanceof NbtCompound taskNbt) {
+                taskNbt.getInt("taskId").ifPresent(data.completedTasks::add);
+            }
         }
         return data;
     }
@@ -75,4 +70,3 @@ public class PlayerTaskData extends PersistentState {
         return TaskDataManager.getPlayerData(player);
     }
 }
-

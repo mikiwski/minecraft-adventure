@@ -2,10 +2,9 @@ package com.adventure.ui;
 
 import com.adventure.config.ModConfig;
 import com.adventure.task.Task;
-import com.adventure.task.TaskManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
@@ -18,7 +17,7 @@ public class TaskHudOverlay {
     private static final int OFFSET_X = 10;
     private static final int OFFSET_Y = 10;
 
-    public static void render(DrawContext context, float tickDelta) {
+    public static void render(DrawContext context, RenderTickCounter tickCounter) {
         if (!ModConfig.isHudEnabled()) {
             return;
         }
@@ -37,7 +36,6 @@ public class TaskHudOverlay {
         }
 
         int screenWidth = client.getWindow().getScaledWidth();
-        int screenHeight = client.getWindow().getScaledHeight();
         
         // Render position (right side by default)
         int x = screenWidth - TASK_WIDTH - OFFSET_X;
@@ -63,9 +61,16 @@ public class TaskHudOverlay {
         int bgColor = isActive ? 0x80000000 | 0x0088FF : 0x80000000;
         context.fill(x, y, x + TASK_WIDTH, y + TASK_HEIGHT, bgColor);
         
-        // Border
+        // Border (draw manually since drawBorder doesn't exist in 1.21.x)
         int borderColor = isActive ? 0xFFFFFFFF : 0xFF888888;
-        context.drawBorder(x, y, TASK_WIDTH, TASK_HEIGHT, borderColor);
+        // Top
+        context.fill(x, y, x + TASK_WIDTH, y + 1, borderColor);
+        // Bottom
+        context.fill(x, y + TASK_HEIGHT - 1, x + TASK_WIDTH, y + TASK_HEIGHT, borderColor);
+        // Left
+        context.fill(x, y, x + 1, y + TASK_HEIGHT, borderColor);
+        // Right
+        context.fill(x + TASK_WIDTH - 1, y, x + TASK_WIDTH, y + TASK_HEIGHT, borderColor);
         
         // Task text
         Text taskText = Text.translatable(task.getTranslationKey())
@@ -95,4 +100,3 @@ public class TaskHudOverlay {
         }
     }
 }
-

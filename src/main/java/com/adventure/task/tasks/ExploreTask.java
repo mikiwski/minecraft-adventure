@@ -10,8 +10,12 @@ public class ExploreTask extends Task {
     private final TagKey<Biome> biomeTag;
 
     public ExploreTask(int id, int difficulty, int targetAmount, Identifier targetBiome, TagKey<Biome> biomeTag, String translationKey) {
-        super(id, TaskType.EXPLORE_BIOME, difficulty, targetAmount, targetBiome, biomeTag, translationKey);
+        super(id, TaskType.EXPLORE_BIOME, difficulty, targetAmount, targetBiome, null, translationKey);
         this.biomeTag = biomeTag;
+    }
+
+    public TagKey<Biome> getBiomeTag() {
+        return biomeTag;
     }
 
     @Override
@@ -20,4 +24,3 @@ public class ExploreTask extends Task {
         return false;
     }
 }
-

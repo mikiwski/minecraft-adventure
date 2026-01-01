@@ -23,12 +23,12 @@ public class AdventureModClient implements ClientModInitializer {
                 "key.adventure.open_task_list",
                 InputUtil.Type.KEYSYM,
                 GLFW.GLFW_KEY_T,
-                "category.adventure.general"
+                KeyBinding.Category.MISC
         ));
 
         // Register HUD overlay
-        HudRenderCallback.EVENT.register((drawContext, tickDelta) -> {
-            TaskHudOverlay.render(drawContext, tickDelta);
+        HudRenderCallback.EVENT.register((drawContext, tickCounter) -> {
+            TaskHudOverlay.render(drawContext, tickCounter);
         });
 
         // Register key press handler
@@ -46,4 +46,3 @@ public class AdventureModClient implements ClientModInitializer {
         AdventureMod.LOGGER.info("Adventure Tasks Mod Client initialized successfully");
     }
 }
-

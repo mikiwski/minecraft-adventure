@@ -8,17 +8,17 @@ import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.TypedActionResult;
+import net.minecraft.util.ActionResult;
 
 public class CraftListener {
     public static void register() {
         // TODO: Implement proper crafting event listener
         // For now, using UseItemCallback as placeholder
         UseItemCallback.EVENT.register((player, world, hand) -> {
-            if (!world.isClient && player instanceof ServerPlayerEntity) {
+            if (!world.isClient() && player instanceof ServerPlayerEntity) {
                 checkCrafting((ServerPlayerEntity) player, player.getStackInHand(hand));
             }
-            return TypedActionResult.pass(ItemStack.EMPTY);
+            return ActionResult.PASS;
         });
     }
 
