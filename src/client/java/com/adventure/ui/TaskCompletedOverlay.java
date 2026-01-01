@@ -45,24 +45,30 @@ public class TaskCompletedOverlay {
         this.taskName = taskTranslationKey;
         this.xpReward = xpReward;
         
-        // Parse items data
+        // Parse items data - sum up items of the same type
         this.itemRewards.clear();
         if (itemsData != null && !itemsData.isEmpty()) {
+            java.util.Map<String, Integer> itemCounts = new java.util.HashMap<>();
+            
             String[] items = itemsData.split(",");
             for (String itemStr : items) {
                 String[] parts = itemStr.split(":");
                 if (parts.length >= 3) {
                     String itemId = parts[0] + ":" + parts[1]; // e.g. "minecraft:iron_ingot"
                     int count = Integer.parseInt(parts[2]);
-                    
-                    try {
-                        Item item = Registries.ITEM.get(Identifier.of(itemId));
-                        if (item != null) {
-                            itemRewards.add(new ItemReward(new ItemStack(item, count), count));
-                        }
-                    } catch (Exception e) {
-                        // Ignore invalid items
+                    itemCounts.put(itemId, itemCounts.getOrDefault(itemId, 0) + count);
+                }
+            }
+            
+            // Create ItemReward objects from summed counts
+            for (var entry : itemCounts.entrySet()) {
+                try {
+                    Item item = Registries.ITEM.get(Identifier.of(entry.getKey()));
+                    if (item != null) {
+                        itemRewards.add(new ItemReward(new ItemStack(item, entry.getValue()), entry.getValue()));
                     }
+                } catch (Exception e) {
+                    // Ignore invalid items
                 }
             }
         }

@@ -1,7 +1,8 @@
 {
   "category.adventure.general": "Adventure Tasks",
   "key.adventure.open_task_list": "Open Task List",
-  "hint.adventure.open_task_list": "Press %s to open task list",
+  "hint.adventure.open_task_list": "[%s] Task List",
+  "hint.adventure.task_list": "Task List",
   "screen.adventure.task_list": "Task List",
   "screen.adventure.coming_soon": "Feature coming soon...",
   "screen.adventure.instructions": "Complete tasks to earn experience!",

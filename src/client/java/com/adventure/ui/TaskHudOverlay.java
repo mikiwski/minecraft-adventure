@@ -73,8 +73,9 @@ public class TaskHudOverlay {
             // Use default "J" if we can't get the key
         }
         
-        // Simple hint text
-        String hintStr = "[" + keyName + "] Lista zadan";
+        // Use translation for hint text
+        Text hintText = Text.translatable("hint.adventure.open_task_list", keyName);
+        String hintStr = hintText.getString();
         
         int textWidth = MinecraftClient.getInstance().textRenderer.getWidth(hintStr);
         int hintX = screenWidth / 2 - textWidth / 2;

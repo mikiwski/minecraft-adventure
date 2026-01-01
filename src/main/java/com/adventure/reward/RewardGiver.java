@@ -42,21 +42,27 @@ public class RewardGiver {
     }
 
     private static List<RewardResult.ItemReward> giveItemRewards(ServerPlayerEntity player, Task task, int multiplier) {
-        List<RewardResult.ItemReward> rewards = new ArrayList<>();
+        // Use a map to sum up items of the same type
+        java.util.Map<String, Integer> itemCounts = new java.util.HashMap<>();
         
         // Give random items based on difficulty
         for (int i = 0; i < multiplier; i++) {
             ItemStack reward = getRandomRewardItem(task.getDifficulty());
             if (!reward.isEmpty()) {
-                // Track for display
                 String itemId = Registries.ITEM.getId(reward.getItem()).toString();
-                rewards.add(new RewardResult.ItemReward(itemId, reward.getCount()));
+                itemCounts.put(itemId, itemCounts.getOrDefault(itemId, 0) + reward.getCount());
                 
                 if (!player.getInventory().insertStack(reward)) {
                     // Drop if inventory is full
                     player.dropItem(reward, false);
                 }
             }
+        }
+        
+        // Convert map to list
+        List<RewardResult.ItemReward> rewards = new ArrayList<>();
+        for (var entry : itemCounts.entrySet()) {
+            rewards.add(new RewardResult.ItemReward(entry.getKey(), entry.getValue()));
         }
         
         return rewards;
