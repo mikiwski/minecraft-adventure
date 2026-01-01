@@ -34,6 +34,7 @@ public class ItemPickupListener {
                 
                 if (activeTask.isCompleted()) {
                     TaskManager.getInstance().completeTask(player, activeTask);
+                    com.adventure.reward.RewardGiver.giveReward(player, activeTask);
                     AdventureMod.LOGGER.info("Task {} completed by player {}", activeTask.getId(), player.getName().getString());
                 }
             }
