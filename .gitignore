@@ -1,0 +1,35 @@
+# Gradle
+.gradle/
+build/
+out/
+!build/resources/main/
+.gradletasknamecache
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# System
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Minecraft
+run/
+logs/
+*.log
+*.cache
+
+# User files
+user.properties
+launchProfiles.json
+
+# Fabric
+remappedSrc/
+
